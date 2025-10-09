@@ -15,7 +15,6 @@
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
-    "google-trends-api": "^4.9.2",
     "mongoose": "^8.19.1",
     "node-cache": "^5.1.2",
     "twitter-api-v2": "^1.27.0",
