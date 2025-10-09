@@ -1,0 +1,34 @@
+/* Import Tailwind's base styles, components, and utilities */
+@import "tailwindcss";
+
+/*
+  This is your new "tailwind.config.js".
+  You can define custom theme values using CSS variables.
+*/
+@theme {
+  --color-brand-primary: #1e40af; /* A custom blue color */
+  
+  /* Example of extending a font family */
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+/* 
+  Example of a custom utility class using the new @utility directive.
+  This will work with all of Tailwind's variants like hover: or lg:.
+*/
+@utility visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* A few global styles for a cleaner look */
+body {
+  @apply bg-slate-50 text-slate-800 antialiased;
+}
