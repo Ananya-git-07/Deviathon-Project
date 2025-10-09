@@ -1,10 +1,5 @@
 const googleTrends = require('google-trends-api');
 
-/**
- * Finds rising or top related topics from Google Trends for a specific keyword.
- * @param {string} keyword - The keyword to find related trends for.
- * @returns {Promise<Array>} - A list of trend objects.
- */
 const getGoogleRelatedTopics = async (keyword) => {
   if (!keyword) return [];
   try {

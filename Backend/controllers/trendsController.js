@@ -1,27 +1,26 @@
 const { searchYouTubeByTopic } = require('../services/youtubeService');
 const { searchRedditByTopic } = require('../services/redditService');
 const { getGoogleRelatedTopics } = require('../services/googleTrendsService');
+const { searchTwitterByTopic } = require('../services/twitterService'); // <-- ADD THIS
 
-// @desc    Fetch real-time trends from multiple platforms based on a topic
-// @route   GET /api/trends?topic=your_topic_here
-// @access  Public
 const getTrends = async (req, res) => {
   const { topic } = req.query;
 
   if (!topic) {
-    return res.status(400).json({ success: false, error: 'Please provide a topic as a query parameter (e.g., ?topic=skincare).' });
+    return res.status(400).json({ success: false, error: 'Please provide a topic as a query parameter.' });
   }
 
   try {
-    // Fetch trends from all sources concurrently with the provided topic
-    const [youtubeTrends, redditTrends, googleTrends] = await Promise.all([
+    // Fetch trends from all sources concurrently
+    const [youtubeTrends, redditTrends, googleTrends, twitterTrends] = await Promise.all([ // <-- ADD twitterTrends
       searchYouTubeByTopic(topic),
-      searchRedditByTopic(topic), // Use the new search function
+      searchRedditByTopic(topic),
       getGoogleRelatedTopics(topic),
+      searchTwitterByTopic(topic), // <-- ADD THIS CALL
     ]);
 
     // Combine all trends into a single array
-    const allTrends = [...youtubeTrends, ...redditTrends, ...googleTrends];
+    const allTrends = [...youtubeTrends, ...redditTrends, ...googleTrends, ...twitterTrends]; // <-- ADD twitterTrends
 
     if (allTrends.length === 0) {
       return res.status(404).json({ success: true, message: `Could not find any trends for the topic: "${topic}"` });
