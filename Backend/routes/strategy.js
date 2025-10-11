@@ -1,17 +1,26 @@
 const express = require('express');
 const router = express.Router();
 
-// --- UPDATED: Import the new controller functions ---
-const { generateStrategy, getStrategies, getStrategyById } = require('../controllers/strategyController');
+const { 
+  generateStrategy, 
+  getStrategies, 
+  getStrategyById,
+  updateCalendarItem,
+  generatePersona, // <-- IMPORT new controller
+  generateIdeas, // <-- Import
+  deleteStrategy
+} = require('../controllers/strategyController');
 
-// Route to generate a content strategy
-router.route('/generate').post(generateStrategy);
+const { protect } = require('../middleware/authMiddleware'); // <-- Import protect
 
-// --- NEW: Route to get all strategies ---
-router.route('/').get(getStrategies);
+router.route('/generate').post(protect, generateStrategy);
+router.route('/generate-persona').post(generatePersona); // <-- NEW ROUTE
 
-// --- NEW: Route to get a single strategy by ID ---
-// Note: This must come AFTER the '/generate' route
-router.route('/:id').get(getStrategyById);
+router.route('/').get(protect, getStrategies);
+router.route('/:id')
+  .get(protect, getStrategyById)
+  .delete(protect, deleteStrategy);
+router.route('/:strategyId/calendar/:day').put(protect, updateCalendarItem);
+router.route('/generate-ideas').post(protect, generateIdeas); // <-- Apply protect
 
 module.exports = router;

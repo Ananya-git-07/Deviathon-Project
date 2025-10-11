@@ -9,6 +9,11 @@ const PostSchema = new mongoose.Schema({
 });
 
 const CompetitorSchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+    required: true,
+  },
   name: {
     type: String,
     required: true,
@@ -19,9 +24,20 @@ const CompetitorSchema = new mongoose.Schema({
     required: true,
     enum: ['YouTube', 'Twitter', 'Blog'],
   },
-  handle: {
+  // --- UPDATED: Replaced 'handle' with platform-specific identifiers ---
+  youtubeChannelId: {
     type: String,
-    required: true,
+    sparse: true, // Allows multiple nulls, but unique if present
+    unique: true,
+  },
+  twitterHandle: {
+    type: String,
+    sparse: true,
+    unique: true,
+  },
+  blogRssUrl: {
+    type: String,
+    sparse: true,
     unique: true,
   },
   lastFetched: {
@@ -29,7 +45,6 @@ const CompetitorSchema = new mongoose.Schema({
   },
   recentPosts: [PostSchema],
   
-  // --- NEW: Add this field to store the AI analysis ---
   topicAnalysis: {
     themes: { type: [String], default: [] },
     summary: { type: String, default: '' },

@@ -23,11 +23,13 @@ app.get('/', (req, res) => {
 const trends = require('./routes/trends');
 const strategy = require('./routes/strategy');
 const competitors = require('./routes/competitors');
+const auth = require('./routes/auth'); // <-- Import auth router
 
 // Mount routers
 app.use('/api/trends', trends);
 app.use('/api/strategy', strategy);
 app.use('/api/competitors', competitors);
+app.use('/api/auth', auth);
 
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);

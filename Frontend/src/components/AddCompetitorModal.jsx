@@ -1,25 +1,35 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Youtube, Twitter } from 'lucide-react';
+import { FaRss } from 'react-icons/fa';
+
+const platformOptions = [
+  { value: 'YouTube', label: 'YouTube', icon: <Youtube className="w-5 h-5 text-red-500" />, placeholder: '@handle or Channel Name' },
+  { value: 'Twitter', label: 'Twitter', icon: <Twitter className="w-5 h-5 text-blue-400" />, placeholder: '@username (without @)' },
+  { value: 'Blog', label: 'Blog (RSS)', icon: <FaRss className="w-5 h-5 text-orange-500" />, placeholder: 'https://example.com/feed' },
+];
 
 const AddCompetitorModal = ({ isOpen, onClose, onAdd }) => {
   const [handle, setHandle] = useState('');
-  const [platform] = useState('YouTube'); // Hardcoded as per backend limitation
+  const [platform, setPlatform] = useState('YouTube');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const selectedPlatform = platformOptions.find(p => p.value === platform);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!handle) {
-      setError('Please enter a YouTube channel handle.');
+      setError('Please enter a value.');
       return;
     }
     setError('');
     setLoading(true);
     try {
       await onAdd({ platform, handle });
-      onClose(); // Close modal on success
-      setHandle(''); // Reset form
+      onClose();
+      setHandle('');
+      setPlatform('YouTube');
     } catch (err) {
       setError(err.message || 'Failed to add competitor.');
     } finally {
@@ -34,7 +44,7 @@ const AddCompetitorModal = ({ isOpen, onClose, onAdd }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
           onClick={onClose}
         >
           <motion.div
@@ -50,20 +60,38 @@ const AddCompetitorModal = ({ isOpen, onClose, onAdd }) => {
                 <X />
               </button>
             </div>
-            <p className="text-sm text-gray-400 mb-4">
-              Enter the YouTube channel handle (e.g., "mkbhd", "mrbeast"). The system will fetch their latest videos.
+            <p className="text-sm text-gray-400 mb-6">
+              Select a platform and provide the requested information to start tracking.
             </p>
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
-                <label className="block text-white mb-2" htmlFor="handle">
-                  YouTube Handle
+                <label className="block text-white mb-2" htmlFor="platform">
+                  Platform
+                </label>
+                <div className="grid grid-cols-3 gap-2">
+                  {platformOptions.map(opt => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setPlatform(opt.value)}
+                      className={`flex flex-col items-center justify-center p-3 rounded-lg border-2 transition-colors ${platform === opt.value ? 'bg-blue-600/30 border-blue-500' : 'bg-gray-700 border-gray-600 hover:border-gray-500'}`}
+                    >
+                      {opt.icon}
+                      <span className="text-xs mt-1 font-semibold">{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="mb-4">
+                <label className="block text-white mb-2 capitalize" htmlFor="handle">
+                  {platform} {platform === 'Blog (RSS)' ? 'URL' : 'Handle'}
                 </label>
                 <input
                   id="handle"
                   type="text"
                   value={handle}
                   onChange={(e) => setHandle(e.target.value)}
-                  placeholder="@handle"
+                  placeholder={selectedPlatform.placeholder}
                   className="w-full p-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

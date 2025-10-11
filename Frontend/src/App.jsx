@@ -1,47 +1,51 @@
-import React, { useState } from 'react'
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom'
-import Navbar from './components/Navbar'
-import Dashboard from './pages/Dashboard'
-import Analytics from './pages/Analytics'
-import Calendar from './pages/Calendar'
-import Competitors from './pages/Competitors'
-import Strategies from './pages/Strategies' // <-- Import the new page
-import { ThemeProvider } from './contexts/ThemeContext'
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import Dashboard from './pages/Dashboard';
+import Analytics from './pages/Analytics';
+import Calendar from './pages/Calendar';
+import Competitors from './pages/Competitors';
+import Strategies from './pages/Strategies';
+import IdeaBank from './pages/IdeaBank'; // <-- Import new page
+import Login from './pages/Login';       // <-- Import new page
+import Signup from './pages/Signup';     // <-- Import new page
+import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider, useAuth } from './contexts/AuthContext'; // <-- Import Auth
+import ProtectedRoute from './components/ProtectedRoute'; // <-- Import ProtectedRoute
 
 const App = () => {
-  const [generatedStrategy, setGeneratedStrategy] = useState(null);
-  const [strategyStartDate, setStrategyStartDate] = useState(null);
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const handleStrategyGenerated = (strategy) => {
-    setGeneratedStrategy(strategy);
-    setStrategyStartDate(new Date());
-    // Navigate to the newly created strategy's calendar view
     navigate(`/calendar/${strategy._id}`);
   };
 
   return (
-    <div className="min-h-screen flex flex-col font-roboto">
+    <div className="min-h-screen flex flex-col font-roboto bg-gray-900">
       <Navbar />
       <div className="flex-1">
         <Routes>
-          <Route path="/" element={<Dashboard onStrategyGenerated={handleStrategyGenerated} />} />
-          <Route path="/analytics" element={<Analytics />} />
+          {/* Public Routes */}
+          <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
+          <Route path="/signup" element={user ? <Navigate to="/" /> : <Signup />} />
           
-          {/* NEW: Route for the list of strategies */}
-          <Route path="/strategies" element={<Strategies />} />
-          
-          {/* UPDATED: Calendar route is now dynamic */}
-          <Route path="/calendar/:strategyId" element={<Calendar />} />
+          {/* Protected Routes */}
+          <Route path="/" element={<ProtectedRoute><Dashboard onStrategyGenerated={handleStrategyGenerated} /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
+          <Route path="/strategies" element={<ProtectedRoute><Strategies /></ProtectedRoute>} />
+          <Route path="/calendar/:strategyId" element={<ProtectedRoute><Calendar /></ProtectedRoute>} />
+          <Route path="/competitors" element={<ProtectedRoute><Competitors /></ProtectedRoute>} />
+          <Route path="/idea-bank" element={<ProtectedRoute><IdeaBank /></ProtectedRoute>} />
 
-          <Route path="/competitors" element={<Competitors />} />
+          {/* Fallback Route */}
+          <Route path="*" element={<Navigate to={user ? "/" : "/login"} />} />
         </Routes>
       </div>
     </div>
   );
 };
 
-// We need to wrap App in Router for navigate to work in the handler
 const AppWrapper = () => (
   <Router>
     <App />
@@ -51,7 +55,9 @@ const AppWrapper = () => (
 function RootApp() {
   return (
     <ThemeProvider>
-      <AppWrapper />
+      <AuthProvider>
+        <AppWrapper />
+      </AuthProvider>
     </ThemeProvider>
   );
 }

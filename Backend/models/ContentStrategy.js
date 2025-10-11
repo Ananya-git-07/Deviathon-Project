@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const ContentStrategySchema = new mongoose.Schema({
+  user: {
+    type: mongoose.Schema.ObjectId,
+    ref: 'User',
+    required: true,
+  },
   targetAudience: {
     type: String,
     required: true,
@@ -13,7 +18,11 @@ const ContentStrategySchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  // --- NEW: Add fields to store the plan's date range ---
+  // --- NEW: Store the AI-generated persona ---
+  audiencePersona: {
+    type: String,
+    default: '',
+  },
   startDate: {
     type: Date,
   },
@@ -30,6 +39,16 @@ const ContentStrategySchema = new mongoose.Schema({
       format: String,
       platform: String,
       postTime: String,
+      status: {
+        type: String,
+        enum: ['To Do', 'In Progress', 'Completed'],
+        default: 'To Do',
+      },
+      // --- NEW: Add a field for the AI's reasoning ---
+      rationale: {
+        type: String,
+        default: 'Generated based on initial strategy parameters.',
+      },
     }],
   },
   createdAt: {
