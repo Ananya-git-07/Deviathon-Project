@@ -209,11 +209,89 @@ const generateContentIdeas = async (topic, type) => {
   }
 };
 
+const findContentGaps = async (competitorThemes, userTopics) => {
+  if (!competitorThemes || competitorThemes.length === 0) {
+    return [];
+  }
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: { responseMimeType: 'application/json' } });
+  
+  const userTopicsPrompt = userTopics.length > 0
+    ? `The user already covers topics like: ${userTopics.join(', ')}.`
+    : `The user has not specified any existing topics.`;
+
+  const prompt = `
+    You are a content strategy analyst. A competitor focuses on these themes:
+    - ${competitorThemes.join('\n- ')}
+
+    ${userTopicsPrompt}
+
+    Your task is to identify 3-5 strategic "content gap" opportunities. These should be topics that are related to the competitor's themes but are likely not being covered by the user. Frame them as actionable content ideas.
+
+    The output MUST be a valid JSON object with a single key "gaps", which is an array of strings.
+    Example:
+    {
+      "gaps": [
+        "Create a detailed case study on [Specific Topic X], as the competitor only mentions it briefly.",
+        "Launch a tutorial series on [Emerging Tool Y] which the competitor isn't discussing yet."
+      ]
+    }
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    const generatedJson = JSON.parse(response.text());
+    return generatedJson.gaps || [];
+  } catch (error) {
+    console.error('Error finding content gaps with Gemini:', error);
+    return ["AI analysis for content gaps failed."];
+  }
+};
+
+
+/**
+ * --- NEW: Expands a single content idea into a more detailed format ---
+ * @param {string} title - The title of the content idea to expand.
+ * @param {string} format - The format of the content (e.g., 'Blog Post', 'Tweet', 'Video').
+ * @returns {Promise<string>} - A markdown-formatted string with the expanded content.
+ */
+const generateExpandedContent = async (title, format) => {
+  const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
+
+  let promptInstruction = '';
+  if (format.toLowerCase().includes('blog')) {
+    promptInstruction = `Generate a 5-point blog post outline for the title "${title}". Include a brief introduction, 5 main heading points with a one-sentence description for each, and a conclusion.`;
+  } else if (format.toLowerCase().includes('tweet')) {
+    promptInstruction = `Write a 3-tweet thread based on the hook "${title}". The first tweet should be the hook, the second should provide the main value/data, and the third should ask an engaging question or provide a call-to-action.`;
+  } else if (format.toLowerCase().includes('video') || format.toLowerCase().includes('reel')) {
+    promptInstruction = `Create a simple 3-scene script for a short-form video (TikTok/Reel) with the title "${title}". The scenes should be: HOOK (capture attention in the first 3 seconds), VALUE (provide the core information), and CTA (call-to-action).`;
+  } else {
+    promptInstruction = `Briefly elaborate on the content idea "${title}" in 2-3 sentences.`;
+  }
+
+  const prompt = `
+    You are an expert content creator. Your task is to expand on a given idea.
+    Task: ${promptInstruction}
+    Format your response using clear markdown headings (e.g., ### Scene 1: The Hook).
+  `;
+
+  try {
+    const result = await model.generateContent(prompt);
+    const response = result.response;
+    return response.text();
+  } catch (error) {
+    console.error('Error expanding content idea with Gemini:', error);
+    return "Failed to expand the idea. Please try again.";
+  }
+};
+
 
 module.exports = {
   generateContentIdeas,
   generateContentStrategy,
   analyzeCompetitorTopics,
   analyzeTrendSentiment,
-  generateAudiencePersona, // <-- Export new function
+  generateAudiencePersona,
+  findContentGaps,
+  generateExpandedContent, // <-- Export new function
 };

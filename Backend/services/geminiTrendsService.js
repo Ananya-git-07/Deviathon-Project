@@ -5,16 +5,14 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const getGeminiGeneratedTrends = async (topic) => {
   if (!topic) return [];
   
-  // --- ADD THIS CACHING LOGIC ---
   const cacheKey = `gemini_trends_${topic.toLowerCase()}`;
   const cachedData = cache.get(cacheKey);
   if (cachedData) {
     console.log(`Serving Gemini trends for "${topic}" from cache.`);
     return cachedData;
   }
-  // -----------------------------
 
-  console.log(`Fetching new Gemini trends for "${topic}" from API.`); // Added log for clarity
+  console.log(`Fetching new Gemini trends for "${topic}" from API.`);
   const model = genAI.getGenerativeModel({
     model: 'gemini-2.5-flash',
     generationConfig: {
@@ -46,11 +44,12 @@ const getGeminiGeneratedTrends = async (topic) => {
 
     const trends = (generatedJson.trends || []).map(keyword => ({
       keyword: keyword,
+      // Create a Google search URL as the link for these simulated trends
+      link: `https://www.google.com/search?q=${encodeURIComponent(keyword)}`,
       platform: 'Google Trends (AI)',
       industry: topic,
     }));
 
-    // --- ADD THIS LINE TO SAVE TO CACHE ---
     cache.set(cacheKey, trends);
     return trends;
 

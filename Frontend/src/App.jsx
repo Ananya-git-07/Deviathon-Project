@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import Dashboard from './pages/Dashboard';
@@ -6,12 +6,15 @@ import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
 import Competitors from './pages/Competitors';
 import Strategies from './pages/Strategies';
-import IdeaBank from './pages/IdeaBank'; // <-- Import new page
-import Login from './pages/Login';       // <-- Import new page
-import Signup from './pages/Signup';     // <-- Import new page
+import IdeaBank from './pages/IdeaBank';
+import Login from './pages/Login';
+import Signup from './pages/Signup';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { AuthProvider, useAuth } from './contexts/AuthContext'; // <-- Import Auth
-import ProtectedRoute from './components/ProtectedRoute'; // <-- Import ProtectedRoute
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+import ProtectedRoute from './components/ProtectedRoute';
+
+// --- NEW: Import Toaster for notifications ---
+import { Toaster } from 'react-hot-toast';
 
 const App = () => {
   const navigate = useNavigate();
@@ -23,6 +26,16 @@ const App = () => {
 
   return (
     <div className="min-h-screen flex flex-col font-roboto bg-gray-900">
+      {/* --- NEW: Add the Toaster component here --- */}
+      <Toaster 
+        position="bottom-right"
+        toastOptions={{
+          style: {
+            background: '#333',
+            color: '#fff',
+          },
+        }}
+      />
       <Navbar />
       <div className="flex-1">
         <Routes>

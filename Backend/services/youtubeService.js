@@ -32,18 +32,18 @@ const searchYouTubeByTopic = async (topic) => {
 
     const trends = response.data.items.map(item => ({
       keyword: item.snippet.title,
+      link: `https://www.youtube.com/watch?v=${item.id.videoId}`, // The direct video link
       platform: 'YouTube',
       industry: topic,
     }));
     
-    cache.set(cacheKey, trends); // Save new data to cache
+    cache.set(cacheKey, trends);
     return trends;
   } catch (error) {
     console.error('Error fetching YouTube search results:', error.response ? error.response.data.error : error.message);
     return [];
   }
 };
-
 /**
  * Fetches the latest videos from a specific YouTube channel by username.
  * @param {string} username - The YouTube channel username (e.g., the part after @).

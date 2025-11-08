@@ -1,8 +1,11 @@
+// --- START OF FIX: Corrected and added all necessary imports ---
 const Competitor = require('../models/Competitor');
+const ContentStrategy = require('../models/ContentStrategy');
 const { getChannelVideos } = require('../services/youtubeService');
 const { getTweetsByUsername } = require('../services/twitterCompetitorService');
 const { getPostsFromRss } = require('../services/blogCompetitorService');
-const { analyzeCompetitorTopics } = require('../services/aiService');
+const { analyzeCompetitorTopics, findContentGaps } = require('../services/aiService');
+// --- END OF FIX ---
 
 const addCompetitor = async (req, res) => {
   const { platform, handle } = req.body;
@@ -16,7 +19,6 @@ const addCompetitor = async (req, res) => {
     let existingCompetitorCheck = {};
     let newCompetitorPayload = { platform };
 
-    // Step 1: Fetch data from the external source based on platform
     switch (platform) {
       case 'YouTube':
         competitorData = await getChannelVideos(handle);
@@ -40,12 +42,11 @@ const addCompetitor = async (req, res) => {
         return res.status(400).json({ success: false, error: 'Unsupported platform.' });
     }
 
-    // Step 2: Check if this competitor is already tracked for THIS USER
-   let competitor = await Competitor.findOne({ ...existingCompetitorCheck, user: req.user.id });
+    let competitor = await Competitor.findOne({ ...existingCompetitorCheck, user: req.user.id });
     if (competitor) {
       return res.status(400).json({ success: false, error: 'This competitor is already being tracked.' });
     }
-    // Step 3: Analyze topics and create the new competitor
+
     const { recentPosts } = competitorData;
     const postTitles = recentPosts.map(post => post.title);
     const analysis = await analyzeCompetitorTopics(postTitles);
@@ -62,17 +63,42 @@ const addCompetitor = async (req, res) => {
     await competitor.save();
     res.status(201).json({ success: true, data: competitor });
   } catch (error) {
+    console.error("Error adding competitor:", error);
     res.status(500).json({ success: false, error: error.message });
   }
 };
 
 const getCompetitors = async (req, res) => {
   try {
-    const competitors = await Competitor.find({ user: req.user.id }).sort({ createdAt: -1 }); // <-- Filter by user
+    const competitors = await Competitor.find({ user: req.user.id }).sort({ createdAt: -1 });
     res.status(200).json({ success: true, count: competitors.length, data: competitors });
   } catch (error) {
+    console.error("Error getting competitors:", error);
     res.status(500).json({ success: false, error: 'Server Error' });
   }
 };
 
-module.exports = { addCompetitor, getCompetitors };
+const analyzeGaps = async (req, res) => {
+  try {
+    const competitor = await Competitor.findOne({ _id: req.params.id, user: req.user.id });
+    if (!competitor || !competitor.topicAnalysis?.themes?.length) {
+      return res.status(404).json({ success: false, error: 'Competitor not found or has no analysis data.' });
+    }
+
+    const userStrategies = await ContentStrategy.find({ user: req.user.id }).select('topic');
+    const userTopics = userStrategies.map(s => s.topic);
+
+    const gaps = await findContentGaps(competitor.topicAnalysis.themes, userTopics);
+
+    res.status(200).json({ success: true, data: gaps });
+  } catch (error) {
+    console.error('Error in analyzeGaps controller:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
+
+module.exports = {
+  addCompetitor,
+  getCompetitors,
+  analyzeGaps,
+};

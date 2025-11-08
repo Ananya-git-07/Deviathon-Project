@@ -1,6 +1,6 @@
 const axios = require('axios');
 const { parseStringPromise } = require('xml2js');
-const cache = require('./cacheService'); // Import the cache
+const cache = require('./cacheService');
 
 /**
  * Searches Reddit for hot posts related to a topic using the RSS feed.
@@ -19,7 +19,6 @@ const searchRedditByTopic = async (topic) => {
 
   try {
     console.log(`Fetching new Reddit trends for "${topic}" from API.`);
-    // --- THIS IS THE CORRECTED AXIOS CALL ---
     const response = await axios.get('https://www.reddit.com/search.rss', {
       params: {
         q: topic,
@@ -40,11 +39,12 @@ const searchRedditByTopic = async (topic) => {
     
     const trends = entries.slice(0, 10).map(entry => ({
       keyword: entry.title[0], 
+      link: entry.link[0].$.href, // Correctly extracts the direct post link
       platform: 'Reddit',
       industry: topic,
     }));
 
-    cache.set(cacheKey, trends); // Save to cache
+    cache.set(cacheKey, trends);
     return trends;
   } catch (error) {
     const status = error.response ? error.response.status : error.message;

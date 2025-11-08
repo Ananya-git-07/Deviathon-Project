@@ -8,7 +8,8 @@ const {
   updateCalendarItem,
   generatePersona, // <-- IMPORT new controller
   generateIdeas, // <-- Import
-  deleteStrategy
+  deleteStrategy,
+    expandIdea
 } = require('../controllers/strategyController');
 
 const { protect } = require('../middleware/authMiddleware'); // <-- Import protect
@@ -22,5 +23,5 @@ router.route('/:id')
   .delete(protect, deleteStrategy);
 router.route('/:strategyId/calendar/:day').put(protect, updateCalendarItem);
 router.route('/generate-ideas').post(protect, generateIdeas); // <-- Apply protect
-
+router.route('/expand-idea').post(protect, expandIdea);
 module.exports = router;

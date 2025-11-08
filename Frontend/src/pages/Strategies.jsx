@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
-import { BrainCircuit, Calendar, Target, Clock, Trash2} from 'lucide-react';
+import { BrainCircuit, Calendar, Target, Clock, Trash2 } from 'lucide-react';
+import toast from 'react-hot-toast'; // <-- Import toast
+import StrategiesSkeleton from '../components/StrategiesSkeleton'; // <-- Import skeleton
 
 const Strategies = () => {
   const [strategies, setStrategies] = useState([]);
@@ -17,7 +19,7 @@ const Strategies = () => {
         const res = await api.get('/api/strategy');
         setStrategies(res.data.data || []);
       } catch (err) {
-        setError(err?.response?.data?.error || err.message || 'Failed to load strategies');
+        setError(err?.normalizedMessage || 'Failed to load strategies');
       } finally {
         setLoading(false);
       }
@@ -29,28 +31,30 @@ const Strategies = () => {
     navigate(`/calendar/${id}`);
   };
 
-    // --- NEW: Function to handle strategy deletion ---
   const handleDeleteStrategy = async (strategyIdToDelete) => {
-    // Show a confirmation dialog before proceeding
-    if (!window.confirm('Are you sure you want to permanently delete this strategy?')) {
-      return;
-    }
+    if (!window.confirm('Are you sure you want to permanently delete this strategy?')) return;
+
+    // Keep a copy of the old state to revert on failure
+    const originalStrategies = [...strategies];
+    
+    // Optimistically update the UI
+    setStrategies(currentStrategies =>
+      currentStrategies.filter(strategy => strategy._id !== strategyIdToDelete)
+    );
 
     try {
-      // Call the DELETE endpoint
       await api.delete(`/api/strategy/${strategyIdToDelete}`);
-
-      // Update the UI by filtering out the deleted strategy
-      setStrategies(currentStrategies =>
-        currentStrategies.filter(strategy => strategy._id !== strategyIdToDelete)
-      );
+      toast.success('Strategy deleted successfully!');
     } catch (err) {
-      // Display an error message if deletion fails
-      setError(err?.normalizedMessage || 'Failed to delete strategy.');
-      // Optional: Hide the error message after a few seconds
-      setTimeout(() => setError(null), 5000);
+      toast.error(err?.normalizedMessage || 'Failed to delete strategy.');
+      // Revert the UI on failure
+      setStrategies(originalStrategies);
     }
   };
+
+  if (loading) {
+    return <StrategiesSkeleton />;
+  }
 
 
 return (

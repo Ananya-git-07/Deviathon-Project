@@ -1,14 +1,15 @@
 const { 
   generateContentStrategy, 
-  generateAudiencePersona, // <-- IMPORT new function
-  generateContentIdeas } = require('../services/aiService');
+  generateAudiencePersona,
+  generateContentIdeas,
+  generateExpandedContent
+} = require('../services/aiService');
 const ContentStrategy = require('../models/ContentStrategy');
 const { searchYouTubeByTopic } = require('../services/youtubeService');
 const { searchRedditByTopic } = require('../services/redditService');
 const { searchTwitterByTopic } = require('../services/twitterService');
 const { getGeminiGeneratedTrends } = require('../services/geminiTrendsService');
 
-// --- NEW CONTROLLER for Idea Bank ---
 const generateIdeas = async (req, res) => {
   const { topic, type } = req.body;
   if (!topic || !type) {
@@ -31,7 +32,6 @@ const generateStrategy = async (req, res) => {
   }
 
   try {
-    // --- STEP 1: Generate the detailed persona first ---
     console.log(`Generating persona for: ${targetAudience}`);
     const audiencePersona = await generateAudiencePersona(targetAudience);
     console.log('Generated Persona:', audiencePersona);
@@ -47,9 +47,8 @@ const generateStrategy = async (req, res) => {
     const trendingKeywords = trendSources.flat().map(trend => trend.keyword).slice(0, 10);
     console.log(`Found trending keywords:`, trendingKeywords);
     
-    // --- STEP 2: Use the detailed persona to generate the strategy ---
     const generatedPlan = await generateContentStrategy(
-      audiencePersona, // <-- Use the detailed persona
+      audiencePersona,
       topic, 
       goals, 
       trendingKeywords,
@@ -59,8 +58,8 @@ const generateStrategy = async (req, res) => {
 
     const newStrategy = new ContentStrategy({
       user: req.user.id,
-      targetAudience, // Still save the user's original input
-      audiencePersona, // <-- Save the generated persona
+      targetAudience,
+      audiencePersona,
       topic,
       goals,
       startDate: startDate || new Date(),
@@ -89,7 +88,7 @@ const getStrategies = async (req, res) => {
 
 const getStrategyById = async (req, res) => {
   try {
-    const strategy = await ContentStrategy.findOne({ _id: req.params.id, user: req.user.id });;
+    const strategy = await ContentStrategy.findOne({ _id: req.params.id, user: req.user.id });
     if (!strategy) {
       return res.status(404).json({ success: false, error: 'Strategy not found or you are not authorized to view it.' });
     }
@@ -101,32 +100,69 @@ const getStrategyById = async (req, res) => {
 };
 
 const updateCalendarItem = async (req, res) => {
-  const { strategyId, day } = req.params;
-  const { title, format, platform, postTime, status, rationale } = req.body;
+  const { strategyId, day: originalDayStr } = req.params;
+  const { title, format, platform, postTime, status, rationale, day: newDay } = req.body;
+  const originalDay = parseInt(originalDayStr);
+
   try {
     const strategy = await ContentStrategy.findById(strategyId);
     if (!strategy) {
       return res.status(404).json({ success: false, error: 'Strategy not found.' });
     }
-    const calendarItem = strategy.generatedPlan.calendar.find(item => item.day == day);
-    if (!calendarItem) {
-      return res.status(404).json({ success: false, error: 'Calendar item not found for that day.' });
+
+    const originalCalendar = strategy.generatedPlan.calendar;
+    const itemToMove = originalCalendar.find(item => item.day === originalDay);
+
+    if (!itemToMove) {
+      return res.status(404).json({ success: false, error: 'Calendar item for original day not found.' });
     }
-    if (title) calendarItem.title = title;
-    if (format) calendarItem.format = format;
-    if (platform) calendarItem.platform = platform;
-    if (postTime) calendarItem.postTime = postTime;
-    if (status) calendarItem.status = status;
-    if (rationale) calendarItem.rationale = rationale; // Allow updating rationale
+
+    // --- START OF NEW, SAFER "MOVE AND OVERWRITE" LOGIC ---
+    if (newDay && newDay !== originalDay) {
+      
+      const newCalendar = [];
+      // Iterate over the original calendar to build the new one safely
+      for (const item of originalCalendar) {
+        // If the current item is the one we are dropping ONTO (the target), SKIP it.
+        if (item.day === newDay) {
+          continue; 
+        }
+        // If the current item is the one we are moving, update its day and add it.
+        if (item.day === originalDay) {
+          newCalendar.push({ ...item.toObject(), day: newDay });
+        }
+        // Otherwise, just add the item as is.
+        else {
+          newCalendar.push(item);
+        }
+      }
+      strategy.generatedPlan.calendar = newCalendar;
+    }
+    // --- END OF NEW LOGIC ---
+
+    // Standard Update (editing details without moving)
+    else {
+      const itemToUpdate = originalCalendar.find(item => item.day === originalDay);
+      if (title) itemToUpdate.title = title;
+      if (format) itemToUpdate.format = format;
+      if (platform) itemToUpdate.platform = platform;
+      if (postTime) itemToUpdate.postTime = postTime;
+      if (status) itemToUpdate.status = status;
+      if (rationale) itemToUpdate.rationale = rationale;
+    }
+
+    strategy.markModified('generatedPlan.calendar');
     await strategy.save();
+
     res.status(200).json({ success: true, data: strategy });
+
   } catch (error) {
-    console.error(error);
+    console.error('Error updating calendar item:', error);
     res.status(500).json({ success: false, error: 'Server Error: Could not update calendar item.' });
   }
 };
 
-// --- NEW: Controller for persona generation on its own ---
+
 const generatePersona = async (req, res) => {
   const { audience } = req.body;
   if (!audience) {
@@ -141,10 +177,8 @@ const generatePersona = async (req, res) => {
   }
 };
 
-// --- NEW: Function to delete a strategy ---
 const deleteStrategy = async (req, res) => {
   try {
-    // Find the strategy by its ID and ensure it belongs to the logged-in user
     const strategy = await ContentStrategy.findOne({
       _id: req.params.id,
       user: req.user.id,
@@ -154,7 +188,7 @@ const deleteStrategy = async (req, res) => {
       return res.status(404).json({ success: false, error: 'Strategy not found or you are not authorized to delete it.' });
     }
 
-    await strategy.deleteOne(); // Mongoose v6+ uses deleteOne() on the document
+    await strategy.deleteOne();
 
     res.status(200).json({ success: true, data: {} });
   } catch (error) {
@@ -163,13 +197,27 @@ const deleteStrategy = async (req, res) => {
   }
 };
 
+const expandIdea = async (req, res) => {
+  const { title, format } = req.body;
+  if (!title || !format) {
+    return res.status(400).json({ success: false, error: 'Please provide a title and format.' });
+  }
+  try {
+    const expandedContent = await generateExpandedContent(title, format);
+    res.status(200).json({ success: true, data: expandedContent });
+  } catch (error) {
+    console.error('Error in expandIdea controller:', error);
+    res.status(500).json({ success: false, error: 'Server Error' });
+  }
+};
 
 module.exports = {
-  generateIdeas,
   generateStrategy,
   getStrategies,
   getStrategyById,
   updateCalendarItem,
-  generatePersona, // <-- Export new controller
+  generatePersona,
   deleteStrategy,
+  generateIdeas,
+  expandIdea,
 };
